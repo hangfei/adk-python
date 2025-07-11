@@ -45,25 +45,43 @@ jobs:
           
           echo "Found merge base: $MERGE_BASE"
 
-          # Get the subject of the very first commit for the new title
+          # --- GENERATE COMMIT MESSAGE ---
+          # 1. Get the subject from the very first commit
           COMMIT_SUBJECT=$(git log --reverse --format=%s $MERGE_BASE..HEAD | head -n 1)
           
-          # Get a formatted list of all commit messages for the new body
+          # 2. Get a formatted list of all commit messages for the body
           COMMIT_BODY=$(git log --format="* %s (%h)" $MERGE_BASE..HEAD)
 
+          # --- GENERATE CO-AUTHOR TRAILERS ---
+          # 3. Get the name and email of the user running the commit
+          COMMITTER_INFO="$(git config user.name) <$(git config user.email)>"
+
+          # 4. Get a unique, sorted list of all other authors
+          # The "|| true" prevents the script from failing if grep finds no other authors
+          CO_AUTHORS=$(git log --format="%an <%ae>" $MERGE_BASE..HEAD | sort -u | grep -vF "$COMMITTER_INFO" || true)
+
+          # 5. Build the "Co-authored-by:" trailers
+          TRAILERS=""
+          if [ -n "$CO_AUTHORS" ]; then
+            while IFS= read -r AUTHOR; do
+              TRAILERS="${TRAILERS}Co-authored-by: ${AUTHOR}\n"
+            done <<< "$CO_AUTHORS"
+          fi
+
+          # --- PERFORM THE SQUASH AND COMMIT ---
+          echo "New commit subject: $COMMIT_SUBJECT"
+          
           # Add a check to prevent empty commits
           if [ -z "$COMMIT_SUBJECT" ]; then
             echo "Could not determine a commit subject. Aborting."
             exit 1
           fi
           
-          echo "New commit subject: $COMMIT_SUBJECT"
-          
-          # Perform the squash
           git reset --soft $MERGE_BASE
           
-          # Create the new commit with the detailed message
-          git commit -m "$COMMIT_SUBJECT" -m "$COMMIT_BODY"
+          # Create the new commit with the subject, body, AND co-author trailers
+          # The -m flags are concatenated to form the final message.
+          git commit -m "$COMMIT_SUBJECT" -m "$COMMIT_BODY" -m "$TRAILERS"
 
 
       # Step 4: Force-push the squashed commit
