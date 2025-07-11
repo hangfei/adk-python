@@ -8,7 +8,8 @@ on:
       - labeled
 
 permissions:
-  contents: write
+  # Permissions are still useful for the initial checkout and reading PR data
+  contents: read
   pull-requests: read
 
 jobs:
@@ -17,30 +18,51 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout using the PAT to have write access later
       - name: Checkout PR Branch
         uses: actions/checkout@v4
         with:
-          # CORRECT: Check out the branch name, not the SHA
+          # Use the PAT so we can push back to the repo
+          token: ${{ secrets.ACTIONS_PAT }}
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Configure Git
+      # Step 2: Configure git with the user associated with the PAT
+      # This makes the commit appear from a user, not a bot
+      - name: Configure Git User
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Use a real user's info (or a dedicated bot user)
+          # to ensure other actions are triggered.
+          git config user.name "Your Name or Bot Name"
+          git config user.email "your-email@example.com"
 
-      - name: Squash Commits
+      # Step 3: Squash commits and create a detailed commit message
+      - name: Squash Commits and Generate Message
+        id: squash
         run: |
           set -e # Exit on error
           BASE_BRANCH=${{ github.event.pull_request.base.ref }}
           MERGE_BASE=$(git merge-base origin/$BASE_BRANCH HEAD)
-          echo "Squashing commits down to the merge base: $MERGE_BASE"
+          
+          # Get the subject of the very first commit for the new title
+          COMMIT_SUBJECT=$(git log --reverse --format=%s ${{ env.MERGE_BASE }}..HEAD | head -n 1)
+          
+          # Get a formatted list of all commit messages for the new body
+          COMMIT_BODY=$(git log --format="* %s (%h)" ${{ env.MERGE_BASE }}..HEAD)
+          
+          echo "New commit subject: $COMMIT_SUBJECT"
+          
+          # Perform the squash
           git reset --soft $MERGE_BASE
-          # Use the PR title and body for the commit message
-          git commit -m "${{ github.event.pull_request.title }}" -m "${{ github.event.pull_request.body }}"
+          
+          # Create the new commit with the detailed message
+          git commit -m "$COMMIT_SUBJECT" -m "$COMMIT_BODY"
+        env:
+          MERGE_BASE: ${{ steps.squash.outputs.merge_base }}
 
+
+      # Step 4: Force-push the squashed commit
       - name: Force-Push to PR Branch
         run: |
-          # CORRECT: Explicitly specify the branch to push to
           BRANCH_NAME=${{ github.event.pull_request.head.ref }}
           git push --force origin HEAD:$BRANCH_NAME
