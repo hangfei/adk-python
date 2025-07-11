@@ -5,6 +5,15 @@
 [![r/agentdevelopmentkit](https://img.shields.io/badge/Reddit-r%2Fagentdevelopmentkit-FF4500?style=flat&logo=reddit&logoColor=white)](https://www.reddit.com/r/agentdevelopmentkit/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/google/adk-python)
 
+
+
+
+
+
+
+
+
+
 <html>
     <h2 align="center">
       <img src="https://raw.githubusercontent.com/google/adk-python/main/assets/agent-development-kit.png" width="256"/>
@@ -22,6 +31,9 @@
 </html>
 
 Agent Development Kit (ADK) is a flexible and modular framework for developing and deploying AI agents. While optimized for Gemini and the Google ecosystem, ADK is model-agnostic, deployment-agnostic, and is built for compatibility with other frameworks. ADK was designed to make agent development feel more like software development, to make it easier for developers to create, deploy, and orchestrate agentic architectures that range from simple tasks to complex workflows.
+
+
+
 
 
 ---
@@ -59,6 +71,9 @@ pip install google-adk
 ```
 
 The release cadence is weekly.
+
+
+
 
 This version is recommended for most users as it represents the most recent official release.
 
