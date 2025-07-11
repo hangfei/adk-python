@@ -38,17 +38,24 @@ jobs:
 
       # Step 3: Squash commits and create a detailed commit message
       - name: Squash Commits and Generate Message
-        id: squash
         run: |
           set -e # Exit on error
           BASE_BRANCH=${{ github.event.pull_request.base.ref }}
           MERGE_BASE=$(git merge-base origin/$BASE_BRANCH HEAD)
           
+          echo "Found merge base: $MERGE_BASE"
+
           # Get the subject of the very first commit for the new title
-          COMMIT_SUBJECT=$(git log --reverse --format=%s ${{ env.MERGE_BASE }}..HEAD | head -n 1)
+          COMMIT_SUBJECT=$(git log --reverse --format=%s $MERGE_BASE..HEAD | head -n 1)
           
           # Get a formatted list of all commit messages for the new body
-          COMMIT_BODY=$(git log --format="* %s (%h)" ${{ env.MERGE_BASE }}..HEAD)
+          COMMIT_BODY=$(git log --format="* %s (%h)" $MERGE_BASE..HEAD)
+
+          # Add a check to prevent empty commits
+          if [ -z "$COMMIT_SUBJECT" ]; then
+            echo "Could not determine a commit subject. Aborting."
+            exit 1
+          fi
           
           echo "New commit subject: $COMMIT_SUBJECT"
           
@@ -57,8 +64,6 @@ jobs:
           
           # Create the new commit with the detailed message
           git commit -m "$COMMIT_SUBJECT" -m "$COMMIT_BODY"
-        env:
-          MERGE_BASE: ${{ steps.squash.outputs.merge_base }}
 
 
       # Step 4: Force-push the squashed commit
